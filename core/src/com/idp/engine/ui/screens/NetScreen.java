@@ -10,26 +10,25 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.Align;
-import com.centergame.starttrack.StartTrackApp;
 import com.idp.engine.App;
 import com.idp.engine.ui.graphics.base.Loader;
 import com.idp.engine.ui.graphics.actors.Text;
 import com.idp.engine.ui.graphics.actors.listview.ListView;
-import com.idp.engine.net.IdpRequest;
+import com.idp.engine.net.Request;
 
 /**
  * Base screen for all screens that need to load some data to display.
  *
  * @param <T> type of data that the screen loads and displays
  *
- * @author dhabensky <dhabensky@idp-crew.com>
+ *
  */
-public abstract class NetScreen<T> extends IdpAppScreen {
+public abstract class NetScreen<T> extends AppScreen {
     
     
     public abstract class NetworkListView extends ListView {
 
-        protected IdpRequest requestManager;
+        protected Request requestManager;
 
         public NetworkListView() {
 
@@ -41,7 +40,7 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 
 
         public boolean isLoading() {
-            return requestManager != null && requestManager.getState() == IdpRequest.State.LOADING;
+            return requestManager != null && requestManager.getState() == Request.State.LOADING;
         }
     }
     
@@ -54,16 +53,10 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 	protected String errorMessage;
 
 
-	/**
-	 * Calls {@link TabScreen#TabScreen()}.
-	 */
 	public NetScreen() {
 		this("");
 	}
 
-	/**
-	 * Calls {@link TabScreen#TabScreen(String)}.
-	 */
 	public NetScreen(String name) {
 		super(name);
 		this.errorMessage = "Ошибка, попробуйте позже";
@@ -108,8 +101,8 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 
 		if (listView == null) {
 
-//			Loader topLoader = new Loader(StartTrackApp.getResources().getIcon("loader"));
-//			topLoader.setSize(Gdx.graphics.getWidth(), StartTrackApp.dp2px(48));
+//			Loader topLoader = new Loader(App.getResources().getIcon("loader"));
+//			topLoader.setSize(Gdx.graphics.getWidth(), app.dp2px(48));
 
 			this.listView = new NetworkListView(null, null) {
                 @Override
@@ -123,11 +116,10 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 					getContentWrapper().scrollToStart(getScrollBackDuration());
 				}
 			};
-
 			listView.setWidth(Gdx.graphics.getWidth());
 			listView.setHeight(getMainLayer().content.getHeight() - listView.getY());
-			listView.getContentWrapper().setOverScroll(StartTrackApp.dp2px(48));
-			listView.getContentWrapper().setSpace(StartTrackApp.dp2px(16));
+			listView.getContentWrapper().setOverScroll(App.dp2px(48));
+			listView.getContentWrapper().setSpace(App.dp2px(16));
 			addActor(listView);
 		}
 		else {
@@ -162,10 +154,10 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 	 * Called from {@link NetScreen#dataFailed()} to display error message.
 	 */
 	protected void initErrorWidget() {
-		Text emptyList = new Text(errorMessage, StartTrackApp.getResources().getLabelStyle("h2"));
+		Text emptyList = new Text(errorMessage, App.getResources().getLabelStyle("h2"));
 		emptyList.getStyle().fontColor = Color.valueOf("666666");
 		emptyList.setAlignment(Align.center);
-		emptyList.setSize(Gdx.graphics.getWidth(), StartTrackApp.dp2px(20));
+		emptyList.setSize(Gdx.graphics.getWidth(), App.dp2px(20));
 		listView.getContent().addActor(new Actor());  // adds gap
 		listView.getContent().addActor(emptyList);
 		listView.getContentWrapper().setBottomOverScroll(0);
@@ -175,9 +167,10 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 	 * Initializes loader that is shown while data is downloading.
 	 */
 	protected void initLoader() {
-		this.loader = new Loader(StartTrackApp.getResources().getIcon("loader"));
+
+		this.loader = new Loader(App.getResources().getIcon("loader"));
 		loader.setPosition(Gdx.graphics.getWidth() / 2 - loader.getWidth() / 2,
-				StartTrackApp.dp2px(24) + loader.getHeight() / 2
+				App.dp2px(24) + loader.getHeight() / 2
 		);
 	}
 
@@ -188,6 +181,7 @@ public abstract class NetScreen<T> extends IdpAppScreen {
 		if (loader == null)
 			initLoader();
 		loader.start();
+
 		addActor(loader);
 	}
 

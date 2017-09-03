@@ -12,22 +12,20 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
-import com.badlogic.gdx.scenes.scene2d.InputEvent;
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
-import com.centergame.starttrack.StartTrackApp;
-import com.centergame.starttrack.screens.base.StartTrackBaseScreen;
+import com.badlogic.gdx.utils.XmlReader;
+import com.badlogic.gdx.utils.reflect.ClassReflection;
+import com.badlogic.gdx.utils.reflect.Field;
+import com.badlogic.gdx.utils.reflect.ReflectionException;
+import com.idp.engine.ui.screens.ScreenManager;
 import com.idp.engine.resources.Resources;
-import com.idp.engine.ui.graphics.base.Navbar;
-import com.idp.engine.ui.graphics.base.Rect;
 import com.idp.engine.resources.assets.IdpAssetManager;
-import com.idp.engine.base.Idp;
+import com.idp.engine.base.AppUtils;
 import com.idp.engine.base.IdpInput;
-import com.idp.engine.ui.screens.IdpAppScreen;
-import com.idp.engine.ui.screens.IdpBaseScreen;
-import com.idp.engine.ui.screens.TransitionManager;
+import com.idp.engine.ui.screens.AppScreen;
 
+import java.io.IOException;
 import java.util.EmptyStackException;
-import java.util.Stack;
+import java.util.HashMap;
 
 import de.tomgrill.gdxdialogs.core.GDXDialogs;
 import de.tomgrill.gdxdialogs.core.GDXDialogsSystem;
@@ -43,34 +41,28 @@ public class App extends Game {
     protected Resources resources;
 	protected static float dp2pxCoeff;
 	protected GDXDialogs dialogs;
-
-	protected TransitionManager transitionManager;
-	protected IdpAppScreen currentScreen;
-	protected final Stack<IdpAppScreen> stack = new Stack<IdpAppScreen>();
-
+	protected ScreenManager screenManager;
 	private Color glColor = Color.BLACK;
-
-
 
 	@Override
 	public void create() {
 
-		if (com.idp.engine.base.Idp.app != null) {
-			com.idp.engine.base.Idp.app.dispose();
+		if (AppUtils.app != null) {
+			AppUtils.app.dispose();
 		}
         instance = this;
-		com.idp.engine.base.Idp.app = this;
-		com.idp.engine.base.Idp.input = new IdpInput();
-		com.idp.engine.base.Idp.files = new com.idp.engine.base.IdpFiles();
-		com.idp.engine.base.Idp.logger = null;
+		AppUtils.app = this;
+		AppUtils.input = new IdpInput();
+		AppUtils.files = new com.idp.engine.base.IdpFiles();
+		AppUtils.logger = null;
         initDp();
-		com.idp.engine.base.Idp.input.startProcessing();
+		AppUtils.input.startProcessing();
 
-		Idp.input.setBackKeyProcessor(new InputAdapter() {
+		AppUtils.input.setBackKeyProcessor(new InputAdapter() {
 			public boolean keyDown(int keycode) {
 				if (keycode == Input.Keys.BACK) {
 					try {
-						popScreen();
+						App.backScreen();
 					} catch (EmptyStackException ex) {
 						Gdx.app.exit();
 					}
@@ -79,14 +71,53 @@ public class App extends Game {
 				return false;
 			}
 		});
-		Idp.input.setCatchBackKey(true);
+		AppUtils.input.setCatchBackKey(true);
 		Gdx.graphics.setContinuousRendering(false);  // important to save battery
 
 		dialogs = GDXDialogsSystem.install();
+
+		this.resources = new Resources();
+		screenManager = new ScreenManager();
+		this.resources.loadSystemFonts();
+		loadXmlConfig();
+
+		setGLColor(Colors.MAIN);
+
+		screenManager.start();
 	}
 
 	protected void setGLColor(Color сolor) {
 		glColor = сolor;
+	}
+
+	private void loadXmlConfig() {
+		XmlReader xr = new XmlReader();
+		try {
+			XmlReader.Element config = xr.parse(AppUtils.files.internal("appconfig.xml"));
+			String packageName = config.getAttribute("package");
+			String screenname = config.getChildByName("mainscreen").getAttribute("name");
+			Colors.loadColorScheme(config.getChildByName("colors"));
+			this.resources.loadFonts(config.getChildByName("fonts"));
+			this.resources.loadIcons("icons.atlas");
+			this.resources.loadSystemIcons("system/icons/sys_icons.atlas");
+			this.resources.awaitLoad();
+
+
+			Object screenObject = null;
+			try {
+
+				screenObject = ClassReflection.forName(packageName + ".screens." + screenname).newInstance();
+
+			} catch (Exception ex) {
+				screenObject = new AppScreen("DUMMY SCREEN");
+				ex.printStackTrace();
+			}
+
+			screenManager.setStartScreen((AppScreen) screenObject);
+
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
     
 	@Override
@@ -96,19 +127,15 @@ public class App extends Game {
 		super.render();
 	}
 
-	@Override
-	public IdpBaseScreen getScreen() {
-		return (IdpBaseScreen)super.getScreen();
-	}
 
 	@Override
 	public void dispose() {
 		super.dispose();
 		IdpAssetManager.getInstance().dispose();
-		com.idp.engine.base.Idp.app = null;
-		com.idp.engine.base.Idp.input = null;
-		com.idp.engine.base.Idp.files = null;
-		Idp.logger = null;
+		AppUtils.app = null;
+		AppUtils.input = null;
+		AppUtils.files = null;
+		AppUtils.logger = null;
         instance = null;
 	}
     
@@ -179,64 +206,58 @@ public class App extends Game {
 		return dialogs;
 	}
 
-
-
-
+	@Override
+	public final void setScreen(Screen screen) {
+		super.setScreen(screen);
+	}
 
 	//TRANSITIONS
+
+	public static AppScreen getCurrentScreen() {
+		return App.getInstance().screenManager.getCurrentScreen();
+	}
+
+	public static void setCurrentScreen(AppScreen screen) { getInstance().screenManager.setScreen(screen);}
 
 	/**
 	 * Adds new screen to the screen stack.
 	 * @param s new screen
 	 */
-	public void pushScreen(IdpAppScreen s) {
-		stack.push(currentScreen);
-
-		currentScreen = s;
-		Navbar navbar = currentScreen.getNavbar();
-
-		Rect back = new Navbar.NavButton("back");
-		back.setBackgroundColor(Color.CLEAR);
-		back.setColor(StartTrackApp.ColorPallete.TEXT_NAVBAR);
-		back.addListener(new ClickListener() {
-			@Override
-			public void clicked(InputEvent event, float x, float y) {
-				popScreen();
-			}
-		});
-		navbar.getLeftIcons().addActor(back);
-
-		changeScreen(currentScreen, TransitionManager.TransitionType.SLIDE_RIGHT_LEFT);
+	public static void pushScreen(AppScreen s) {
+		getInstance().screenManager.pushScreen(s);
 	}
 
 	/**
-	 * Removes one screen from the screen stack.
+	 * Set previous screen
 	 */
-	public void popScreen() {
-		this.currentScreen = stack.pop();
-		changeScreen(currentScreen, TransitionManager.TransitionType.SLIDE_LEFT_RIGHT);
+	public static void backScreen() {
+		getInstance().screenManager.popScreen();
 	}
 
-	@Override
-	public void setScreen(Screen screen) {
-		currentScreen = (IdpAppScreen) screen;
-		super.setScreen(screen);
-	}
 
-	/**
-	 * performs screen transition from current screen to another.
-	 *
-	 * @param screen screen that will be shown after transition
-	 * @param type transition type
-	 */
-	public void changeScreen(IdpAppScreen screen, TransitionManager.TransitionType type) {
-		if (getScreen() == null) {
-			setScreen(screen);
-		} else {
-			if (getScreen() == transitionManager) return;
-			transitionManager.fadeScreens(type, (StartTrackBaseScreen<?>) screen, 0.4f);
+	public static class Colors {
+		public static Color MAIN = Color.valueOf("333333");
+		public static Color BACK = Color.valueOf("F3F3F3");
+		public static Color TEXT_NAVBAR = Color.valueOf("FFFFFF");
+		public static Color TRANSPARENT = Color.valueOf("00000000");
+		public static Color WIDGET_WHITE = Color.valueOf("FFFFFF");
+		public static Color WIDGET_BORDER = Color.valueOf("e7e7e7");
+		private static HashMap<String, Color> colors = new HashMap<String, Color>();
+
+		public static Color getColorByName(String name) {
+			if (colors.containsKey(name)) return colors.get(name);
+			else return Color.BLACK;
+		}
+		public static void loadColorScheme(XmlReader.Element colorsXml) {
+			for(XmlReader.Element e : colorsXml.getChildrenByName("color")){
+                try {
+                    Field f = ClassReflection.getField(Colors.class, e.getAttribute("name"));
+                    f.set(null, Color.valueOf(e.getAttribute("value")));
+					colors.put(e.getAttribute("name"), Color.valueOf(e.getAttribute("value")));
+                } catch (ReflectionException e1) {
+                    colors.put(e.getAttribute("name"), Color.valueOf(e.getAttribute("value")));
+                }
+            }
 		}
 	}
-
-
 }

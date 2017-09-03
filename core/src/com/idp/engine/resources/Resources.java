@@ -3,14 +3,22 @@ package com.idp.engine.resources;
 import com.badlogic.gdx.Application;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.graphics.g2d.*;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
+import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.scenes.scene2d.ui.Label.LabelStyle;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
-import com.centergame.starttrack.StartTrackApp;
+import com.badlogic.gdx.utils.XmlReader;
 import com.idp.engine.App;
+import com.idp.engine.resources.assets.IdpAsset;
+import com.idp.engine.resources.assets.IdpAssetManager;
 import com.idp.engine.resources.assets.IdpColorPixmap;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 
 /**
  * Provides access for applications resources.
@@ -20,24 +28,25 @@ import java.util.HashMap;
 public class Resources {
     
     protected static class FontAndColor {
-        public com.idp.engine.resources.assets.IdpAsset<BitmapFont> font;
+        public IdpAsset<BitmapFont> font;
         public Color color;
-        public FontAndColor(com.idp.engine.resources.assets.IdpAsset<BitmapFont> font, Color color) {
+        public FontAndColor(IdpAsset<BitmapFont> font, Color color) {
             this.font = font;
             this.color = color;
         }
     }
     
-	protected final com.idp.engine.resources.assets.IdpAssetManager man;
+	protected final IdpAssetManager man;
     protected final HashMap<String, FontAndColor> fonts;
-    protected com.idp.engine.resources.assets.IdpAsset<TextureAtlas> icons;
+    protected IdpAsset<TextureAtlas> userIcons;
+    protected IdpAsset<TextureAtlas> systemIcons;
 
 
 	/**
 	 * Empty resources. Nothing is loaded in constructor.
 	 */
 	public Resources() {
-		this.man = com.idp.engine.resources.assets.IdpAssetManager.getInstance();
+		this.man = IdpAssetManager.getInstance();
         this.fonts = new HashMap<String, FontAndColor>();
 	}
     
@@ -49,18 +58,33 @@ public class Resources {
      * @param color font color
      */
     public void loadFont(String key, String path, int size, Color color) {
-		fonts.put(key, new FontAndColor(man.loadFont(path, App.dp2px(size)), color));
+		fonts.put(key, new FontAndColor(man.loadFont("fonts/" + path, App.dp2px(size)), color));
+    }
+
+    public void loadSystemFont(String key, String path, int size, Color color) {
+        fonts.put(key, new FontAndColor(man.loadFont("system/fonts/" + path, App.dp2px(size)), color));
     }
     
     /**
-     * Queues atlas of icons for loading.
+     * Queues atlas of userIcons for loading.
      * Only single atlas might be loaded.
      * @param iconAtlasPath path to the icon atlas
      */
     public void loadIcons(String iconAtlasPath) {
-        if (this.icons != null)
+        if (this.userIcons != null)
             throw new IllegalStateException("Another atlas is already loaded.");
-		this.icons = man.loadAtlas(iconAtlasPath);
+        try {
+
+            this.userIcons = man.loadAtlas(iconAtlasPath);
+        } catch (Exception ex) {
+            this.userIcons = new IdpAsset<TextureAtlas>();
+        }
+    }
+
+    public void loadSystemIcons(String iconAtlasPath) {
+        if (this.systemIcons != null)
+            throw new IllegalStateException("Another atlas is already loaded.");
+        this.systemIcons = man.loadAtlas(iconAtlasPath);
     }
 
 	/**
@@ -75,7 +99,7 @@ public class Resources {
      * Called once all queued resources get loaded.
      */
     public void onLoaded() {
-        fixFonts();
+        //fixFonts();
     }
 
 	/**
@@ -102,7 +126,27 @@ public class Resources {
 	 * @return icon for the given name
 	 */
     public TextureRegion getIcon(String name) {
-		return icons.getAsset().findRegion(name);
+        TextureRegion region = userIcons.getAsset().findRegion(name);
+        if (region == null)
+            region = systemIcons.getAsset().findRegion(name);
+
+        if (region == null)
+            System.out.println("Cannot find image \""+ name +"\"");
+
+        return region;
+    }
+
+    public TextureRegion getPicture(String name) {
+        try {
+            Texture t = new Texture(name);
+            t.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+            TextureRegion tr = new TextureRegion(t);
+            tr.flip(false, true);
+            return tr;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
     }
 
 
@@ -117,43 +161,91 @@ public class Resources {
         Resources.FontAndColor fac = fonts.get(styleName);
 
         style.font = fac.font.getAsset();
+        fixFonts(style.font);
         style.fontColor = fac.color;
         style.messageFontColor = Color.valueOf("666666");
-        style.cursor = new IdpColorPixmap(Color.valueOf("1e78e6")).buildDrawable();
+        style.cursor = new IdpColorPixmap(Color.valueOf("666666")).buildDrawable();
         style.selection = new IdpColorPixmap(Color.valueOf("a8d1ff")).buildDrawable();
         return style;
     }
 
-    public void enqueueAll() {
+    public void loadFonts(XmlReader.Element fontsXml) {
 
-        loadFont("navbar",              "fonts/SF-UI-Display-Medium.ttf",  18, StartTrackApp.ColorPallete.TEXT_NAVBAR);
-        loadFont("label",               "fonts/SF-UI-Display-Regular.ttf", 14, Color.valueOf("666666"));
-        loadFont("debug_info",          "fonts/SF-UI-Display-Regular.ttf", 14, Color.valueOf("ffffff"));
-        loadFont("h1",                  "fonts/SF-UI-Display-Regular.ttf", 16, Color.BLACK);
-        loadFont("h1-bold",             "fonts/SF-UI-Display-Bold.ttf",    16, Color.BLACK);
-        loadFont("number",              "fonts/SF-UI-Display-Bold.ttf",    18, StartTrackApp.ColorPallete.TEXT_NUMBER);
-        loadFont("text",                "fonts/SF-UI-Text-Regular.ttf",    14, Color.valueOf("666666"));
-        loadFont("text_field",          "fonts/SF-UI-Display-Light.ttf",   16, Color.BLACK);
-        loadFont("logo",                "fonts/SF-UI-Display-Bold.ttf",   25, Color.valueOf("006fc0"));
-        loadFont("header",              "fonts/SF-UI-Text-Bold.ttf",       12, Color.valueOf("666666"));
-        loadFont("participant-number",  "fonts/SF-UI-Text-Bold.ttf",       20, Color.valueOf("666666"));
-        loadFont("popup-title",         "fonts/SF-UI-Text-Bold.ttf",       14, Color.valueOf("000000"));
-        loadFont("popup-buttons",       "fonts/SF-UI-Text-Bold.ttf",       16, Color.valueOf("000000"));
-        loadFont("popup-text",       "fonts/SF-UI-Text-Regular.ttf",    14, Color.valueOf("666666"));
+        LinkedList<FontInfo> list = new LinkedList<FontInfo>();
 
-        loadIcons("icons.atlas");
+        for(XmlReader.Element e : fontsXml.getChildrenByName("font")){
+            list.add(new FontInfo(
+                    e.getAttribute("name"),
+                    e.getAttribute("path"),
+                    e.getAttribute("size"),
+                    e.getAttribute("color")
+            ));
+        }
+
+        for (FontInfo f : list) {
+            f.load();
+        }
     }
 
-    private void fixFonts() {
+    public void loadSystemFonts() {
+        ArrayList<FontInfo> fonts = new ArrayList<FontInfo>();
+        fonts.add(new FontInfo("navbar", "SF-UI-Display-Medium.ttf", "18", "ffffff"));
+        fonts.add(new FontInfo("label", "SF-UI-Display-Regular.ttf", "14", "666666"));
+        fonts.add(new FontInfo("h1", "SF-UI-Display-Regular.ttf", "16", "000000"));
+        fonts.add(new FontInfo("text", "SF-UI-Text-Regular.ttf", "14", "666666"));
+        fonts.add(new FontInfo("text_field", "SF-UI-Display-Light.ttf", "16", "666666"));
+        fonts.add(new FontInfo("button", "SF-UI-Display-Bold.ttf", "14", "000000"));
+
+        for (FontInfo f : fonts) {
+            f.loadSystem();
+        }
+
+    }
+
+    class FontInfo {
+        String name;
+        String path;
+        String size;
+        String color;
+
+        public FontInfo(String name, String path, String size, String color) {
+            this.name = name;
+            this.path = path;
+            this.size = size;
+            this.color = color;
+        }
+
+        public void load() {
+            loadFont(this.name, this.path, Integer.parseInt(size), Color.valueOf(color));
+        }
+
+        public void loadSystem() {
+            loadSystemFont(this.name, this.path, Integer.parseInt(size), Color.valueOf(color));
+        }
+
+        @Override
+        public String toString() {
+            String result="";
+
+            result += "name: " + this.name + "\t";
+            return result;
+        }
+    }
+
+    private void fixFonts(BitmapFont font) {
 
         // font that would be used in TextField needs some fixes...
+//        if (Gdx.app.getType() != Application.ApplicationType.iOS) {
+//            BitmapFont font = fonts.get("text_field").font.getAsset();
+//            font.getData().ascent = font.getCapHeight() / 3;    // coeff got by trial and error
+//        }
+
         if (Gdx.app.getType() != Application.ApplicationType.iOS) {
-            BitmapFont font = fonts.get("text_field").font.getAsset();
             font.getData().ascent = font.getCapHeight() / 3;    // coeff got by trial and error
         }
 
         // fixing line height for font that is used for multiline text
-        fonts.get("text").font.getAsset().getData().setLineHeight(App.dp2px(18));
+        //fonts.get("text").font.getAsset().getData().setLineHeight(App.dp2px(18));
     }
 
 }

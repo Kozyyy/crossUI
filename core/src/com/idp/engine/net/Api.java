@@ -2,7 +2,6 @@ package com.idp.engine.net;
 
 import com.badlogic.gdx.Net;
 import com.badlogic.gdx.net.HttpRequestBuilder;
-import com.centergame.starttrack.api.StartTrackApi;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -28,7 +27,7 @@ public class Api {
         }
         return GSON;
     }
-    protected static IdpRequest request(
+    protected static Request request(
             String method,
             String apiCall,
             Object params,
@@ -42,7 +41,7 @@ public class Api {
         String url = API_URL + "/" + apiCall + s;
         System.out.println(method + " " + url);
 
-        IdpRequest req = new IdpRequest(url);
+        Request req = new Request(url);
         HttpRequestBuilder builder = req.getRequestBuilder();
         builder.method(method).timeout(REQUEST_TIMEOUT_SEC * 1000);
         builder.header("Content-Type",   "application/json");
@@ -75,6 +74,6 @@ public class Api {
      * Sets private token that will be used in all requests that require authentication.
      */
     public static void setPrivateToken(String privateToken) {
-        StartTrackApi.privateToken = privateToken;
+        Api.privateToken = privateToken;
     }
 }

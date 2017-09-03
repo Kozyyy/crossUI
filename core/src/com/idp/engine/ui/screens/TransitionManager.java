@@ -1,19 +1,18 @@
 package com.idp.engine.ui.screens;
 
-import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Interpolation;
+import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.actions.Actions;
-import com.centergame.starttrack.StartTrackApp;
-import com.centergame.starttrack.screens.base.StartTrackBaseScreen;
-import com.idp.engine.base.Idp;
+import com.idp.engine.App;
+import com.idp.engine.base.AppUtils;
 
 /**
- * Screen that is responsible of managing screen transitions. Holy crap.
+ * Screen that is responsible of managing screen transitions.
  *
  * Created by ozvairon on 29.07.16.
  */
-public class TransitionManager extends IdpAppScreen {
+public class TransitionManager extends IdpBaseScreen {
 
 	public static enum TransitionType {
 		FADE, SLIDE_LEFT_RIGHT, SLIDE_RIGHT_LEFT, SLIDE_UP_DOWN, BLINK, SLIDE_DOWN_UP
@@ -21,13 +20,20 @@ public class TransitionManager extends IdpAppScreen {
 
     public TransitionManager() {
         super();
-        this.clearScene();
+        //this.clearScene();
+		this.setName("Transition");
+		stage.getRoot().setTouchable(Touchable.disabled);
     }
 
-	private Screen inScreen;
-	private IdpAppScreen outScreen;
+
+	private AppScreen inScreen;
+	private AppScreen outScreen;
 	private boolean nextontop;
 
+
+	public void init() {
+		stage.getRoot().setTouchable(Touchable.disabled);
+	}
 
 	@Override
 	public void render(float delta) {
@@ -48,35 +54,27 @@ public class TransitionManager extends IdpAppScreen {
 	 * @param nextScreen screen to show after the transition is ended
 	 * @param duration transition duration
 	 */
-	public void fadeScreens(TransitionType type, StartTrackBaseScreen<?> nextScreen, float duration) {
+	public void fadeScreens(TransitionType type, AppScreen nextScreen, float duration) {
 
-		inScreen = StartTrackApp.getInstance().getScreen();
-		if (inScreen instanceof TransitionManager) {
-			inScreen = this.outScreen;
+		if (App.getInstance().getScreen() instanceof TransitionManager) {
+			return;
 		}
 		else {
-            fadeScreens(type, (StartTrackBaseScreen<?>) inScreen, nextScreen, duration);
+            fadeScreens(type, (AppScreen) App.getInstance().getScreen(), nextScreen, duration);
 		}
 	}
 
-	private void fadeScreens(TransitionType type, final StartTrackBaseScreen<?> current, final IdpAppScreen next,
+	private void fadeScreens(TransitionType type, final AppScreen current, final AppScreen next,
 							 final float duration) {
 
 		this.inScreen = current;
 		this.outScreen = next;
 
-//		stage.addActor(StartTrackApp.getInstance().getFpsLabel());
-
-//		next.getStage().getRoot().setColor(Color.WHITE);
-//		current.getStage().getRoot().setColor(Color.WHITE);
-
-		StartTrackApp.getInstance().setScreen(this);
+		App.getInstance().setScreen(this);
 
 		switch (type) {
 			case SLIDE_LEFT_RIGHT:
 				nextontop = false;
-
-				//next.getStage().getRoot().debugAll();
 
 				next.getStage().getRoot().setPosition(-next.getStage().getWidth() / 4, 0);
 				next.getStage().addAction(
@@ -87,9 +85,11 @@ public class TransitionManager extends IdpAppScreen {
                                         next.fadeIn(duration);
                                     }
                                 })
+
+
                         )
                 );
-				//current.getStage().getRoot().debugAll();
+
 				current.getStage().addAction(
 						Actions.sequence(
 								Actions.moveTo(
@@ -98,7 +98,7 @@ public class TransitionManager extends IdpAppScreen {
 								),
 								Actions.run(new Runnable() {
 									public void run() {
-										StartTrackApp.getInstance().setScreen(outScreen);
+										App.setCurrentScreen(outScreen);
 									}
 								})
 						)
@@ -125,7 +125,7 @@ public class TransitionManager extends IdpAppScreen {
 							),
 							Actions.run(new Runnable() {
 								public void run() {
-									StartTrackApp.getInstance().setScreen(outScreen);
+									App.getInstance().setScreen(outScreen);
 								}
 							})
 						)
@@ -143,7 +143,7 @@ public class TransitionManager extends IdpAppScreen {
 								),
 								Actions.run(new Runnable() {
 									public void run() {
-										StartTrackApp.getInstance().setScreen(next);
+										App.getInstance().setScreen(next);
 									}
 								})
 						)
@@ -161,7 +161,7 @@ public class TransitionManager extends IdpAppScreen {
 								),
 								Actions.run(new Runnable() {
 									public void run() {
-										StartTrackApp.getInstance().setScreen(next);
+										App.getInstance().setScreen(next);
 									}
 								})
 						)
@@ -175,7 +175,7 @@ public class TransitionManager extends IdpAppScreen {
 								Actions.fadeOut(duration),
 								Actions.run(new Runnable() {
 									public void run() {
-										StartTrackApp.getInstance().setScreen(outScreen);
+										App.getInstance().setScreen(outScreen);
 									}
 								}),
 								Actions.color(Color.WHITE)
@@ -184,9 +184,10 @@ public class TransitionManager extends IdpAppScreen {
 				break;
 
 			case BLINK:
-				StartTrackApp.getInstance().setScreen(outScreen);
+				App.getInstance().setScreen(outScreen);
 				break;
 		}
-		Idp.input.setInputProcessor(next.getStage());
+
+		AppUtils.input.setInputProcessor(next.getStage());
 	}
 }

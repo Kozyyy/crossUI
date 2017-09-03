@@ -7,43 +7,39 @@ package com.idp.engine.ui.graphics.base;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
-import com.badlogic.gdx.scenes.scene2d.*;
-import com.badlogic.gdx.scenes.scene2d.actions.Actions;
+import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.Group;
 import com.badlogic.gdx.utils.Align;
 import com.idp.engine.App;
+import com.idp.engine.ui.graphics.actors.Image;
+import com.idp.engine.ui.graphics.actors.Text;
 
 /**
  * Navigation bar element.
- * Contains text, supports dropdown, also may contain icons to the left or to the right of the text.
+ * Contains text, supports dropdown, also may contain userIcons to the left or to the right of the text.
  *
- * @author dhabensky <dhabensky@idp-crew.com>
+ *
  */
 public class Navbar extends Rect {
 
-	private final com.idp.engine.ui.graphics.actors.Text text;
+	private final Text text;
 	private final Group textGroup;
 	private final Group leftIcons;
 	private final Group rightIcons;
 
 	private Color contentColor;
 	private final float iconSize;
-	private boolean hasDropDown;
 
-	private Rect dropdownMenu;
 
 
 	public Navbar() {
 
-		// todo: read style from config
-
 		setName("navbar");
-		this.contentColor = Color.BLACK;
+		this.contentColor = App.Colors.TEXT_NAVBAR;
 		this.iconSize = App.dp2px(40);
 		float h = App.dp2px(56);
 
 		setSize(Gdx.graphics.getWidth(), h);
-		setBorder(0, 0, App.dp2px(1), 0);
-		setBorderColor(Color.BLACK);
 		setBackgroundColor(Color.CLEAR);
 		float padleft = App.dp2px(8);
 		float padright = App.dp2px(8);
@@ -53,7 +49,7 @@ public class Navbar extends Rect {
 		textGroup.setSize(Gdx.graphics.getWidth() - App.dp2px(168), App.dp2px(24));
 
 
-		this.text = new com.idp.engine.ui.graphics.actors.Text("", App.getResources().getLabelStyle("navbar"));
+		this.text = new Text("", App.getResources().getLabelStyle("navbar"));
 		text.setWidth(Gdx.graphics.getWidth() - App.dp2px(168));
 		text.setHeight(App.dp2px(24));
 		text.setAlignment(Align.center);
@@ -75,7 +71,6 @@ public class Navbar extends Rect {
 		rightIcons.setX(getWidth() - padright - iconSize);
 		rightIcons.setY((h - iconSize) / 2);
 
-
 		addActor(leftIcons);
 		addActor(textGroup);
 		addActor(rightIcons);
@@ -84,56 +79,12 @@ public class Navbar extends Rect {
 		textGroup.setX((getWidth() - textGroup.getWidth()) / 2);
 	}
 
-	public void setText(String name) {
+	public void setTitle(String name) {
 		text.setText(name);
-		if (hasDropDown) {
-			float x = text.getX() + (text.getWidth() + text.getGlyphLayout().width) * 0.5f +
-							App.dp2px(8);
-			textGroup.findActor("chevron").setX(x);
-		}
 	}
 
 	public Group getTextGroup() {
 		return textGroup;
-	}
-
-	public void setDropdownMenu(Rect menu) {
-		dropdownMenu = menu;
-		if (menu != null) {
-			menu.setVisible(false);
-			if (!hasDropDown)
-				addChevron();
-			this.hasDropDown = true;
-		}
-		else {
-			if (hasDropDown)
-				removeChevron();
-			this.hasDropDown = false;
-		}
-	}
-
-	public void openMenu() {
-		getParent().addActorBefore(this, dropdownMenu);
-		dropdownMenu.clearActions();
-		dropdownMenu.setY(getHeight() - dropdownMenu.getHeight());
-		dropdownMenu.setVisible(true);
-		dropdownMenu.setTouchable(Touchable.enabled);
-		dropdownMenu.addAction(Actions.moveTo(0, getHeight(), 0.2f));
-	}
-
-	public void closeMenu() {
-		dropdownMenu.clearActions();
-		dropdownMenu.addAction(Actions.sequence(Actions.moveTo(0, getHeight() - dropdownMenu.getHeight(), 0.2f),
-				Actions.visible(false),
-				Actions.touchable(Touchable.disabled),
-				Actions.removeActor(dropdownMenu)
-		));
-	}
-
-	public void flipChevron() {
-		com.idp.engine.ui.graphics.actors.ImageActor i = textGroup.findActor("chevron");
-		if (i != null)
-			i.getSprite().flip(false, true);
 	}
 
 	public void setContentColor(Color contentColor) {
@@ -151,6 +102,10 @@ public class Navbar extends Rect {
 		return contentColor;
 	}
 
+	public float getIconSize() {
+		return iconSize;
+	}
+
 	public Group getLeftIcons() {
 		return leftIcons;
 	}
@@ -159,35 +114,20 @@ public class Navbar extends Rect {
 		return rightIcons;
 	}
 
-	public float getIconSize() {
-		return iconSize;
-	}
-
-	private void addChevron() {
-		com.idp.engine.ui.graphics.actors.ImageActor i = new com.idp.engine.ui.graphics.actors.ImageActor(App.getResources().getIcon("chevron"));
-		i.setColor(Color.BLACK);
-		i.setSize(App.dp2px(12), App.dp2px(12));
-		i.setName("chevron");
-		textGroup.addActor(i);
-		i.setX(text.getX() + (text.getWidth() + text.getGlyphLayout().width) * 0.5f + App.dp2px(
-				8));
-		i.setY((textGroup.getHeight() - i.getHeight()) / 2);
-	}
-
-	private void removeChevron() {
-		if (textGroup.findActor("chevron") != null) {
-			textGroup.removeActor(textGroup.findActor("chevron"));
-		}
+	public void addButton(NavButton button) {
+		rightIcons.clear();
+		rightIcons.addActor(button);
 	}
 
 	public static class NavButton extends Rect {
 
-		private final com.idp.engine.ui.graphics.actors.ImageActor icon;
+		private final Image icon;
 		private final float padding;
 
 		public NavButton(String name) {
-			this.icon = new com.idp.engine.ui.graphics.actors.ImageActor(App.getResources().getIcon(name));
+			this.icon = new Image(App.getResources().getIcon(name));
 			this.padding = App.dp2px(12);
+			this.icon.setColor(App.Colors.TEXT_NAVBAR);
 			addActor(icon);
 			setSize(App.dp2px(40), App.dp2px(40));
 
@@ -210,5 +150,6 @@ public class Navbar extends Rect {
 			super.setColor(color);
 			icon.setColor(color);
 		}
+
 	}
 }

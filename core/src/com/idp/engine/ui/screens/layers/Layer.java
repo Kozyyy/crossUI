@@ -7,12 +7,16 @@ import com.idp.engine.ui.graphics.base.Rect;
 /**
  * Root element that holds hierarchy of others.
  *
- * @author dhabensky <dhabensky@idp-crew.com>
+ *
  */
 public class Layer extends Rect {
 
 	public Layer() {
+		//setFixHeight(true);
 		this.setSize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-		this.setBackgroundColor(Color.valueOf("eeeeee"));
+//		this.setPadding(0);
+//		this.setGap(0);
+		this.setBackgroundColor(Color.valueOf("eeeeeeff"));
 	}
+
 }

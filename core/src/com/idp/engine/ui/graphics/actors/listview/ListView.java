@@ -10,14 +10,15 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.scenes.scene2d.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ActorGestureListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ScissorStack;
+import com.idp.engine.ui.graphics.base.Widget;
 
 
 /**
  * ListView slider widget.
  *
- * @author dhabensky <dhabensky@idp-crew.com>
+ *
  */
-public class ListView extends Group {
+public class ListView extends Widget {
 
 	protected final ContentWrapper wrapper;
 	protected final Group content;
@@ -35,6 +36,10 @@ public class ListView extends Group {
 		this(null, null);
 	}
 
+	@Override
+	protected void init() {
+
+	}
 
 	/**
 	 * Creates list view and initializes its loaders with given loaders.
@@ -70,6 +75,13 @@ public class ListView extends Group {
 
 	}
 
+	@Override
+	public void addActor(Actor actor) {
+		if (actor instanceof ScrollBar || actor instanceof ContentWrapper)
+			super.addActor(actor);
+		else
+			getContent().addActor(actor);
+	}
 
 	@Override
 	public void drawChildren(Batch batch, float parentAlpha) {
@@ -98,6 +110,11 @@ public class ListView extends Group {
 		}
 		wrapper.sizeChanged();
 		bounds.setSize(getWidth(), getHeight());
+	}
+
+	public void setHorizontal(boolean isHorizontal) {
+		getContentWrapper().setHorisontal(isHorizontal);
+		getContentWrapper().updateContent();
 	}
 
 	/**
@@ -250,5 +267,6 @@ public class ListView extends Group {
 				listView.getScrollBar().fadeOut();
 			}
 		}
+
 	}
 }
